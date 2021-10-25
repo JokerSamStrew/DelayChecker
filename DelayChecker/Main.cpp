@@ -1,6 +1,5 @@
 #include <opencv2/opencv.hpp>
 #include <ctime>
-#include <format>
 #include <Windows.h>
 #include <atlconv.h>
 #include <atlsafe.h>
