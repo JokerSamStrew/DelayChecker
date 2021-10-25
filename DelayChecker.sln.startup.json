@@ -13,7 +13,7 @@
     "DelayCheckerWithArgs": {
       "Projects": {
         "DelayChecker": {
-          "CommandLineArguments": "rtsp://localhost:5555/stream",
+          "CommandLineArguments": "rtsp://localhost:5555/stream 25",
           "StartProject": true
         }
       }
