@@ -13,7 +13,7 @@ void draw_time(const cv::Mat& image)
 	errno_t err = localtime_s(&newtime, &now);
 	std::string str;
 	if (err)
-		str = "locatimme err";
+		str = "locatime err";
 
 	auto hour = newtime.tm_hour < 10 ? " " + std::to_string(newtime.tm_hour) : std::to_string(newtime.tm_hour);
 	auto min = newtime.tm_min < 10 ? "0" + std::to_string(newtime.tm_min) : std::to_string(newtime.tm_min);
@@ -21,11 +21,12 @@ void draw_time(const cv::Mat& image)
 
 	str = hour + ":" + min + ":" + sec;
 
-	auto point = cv::Point(20, 40 + 30);
+	auto point = cv::Point(20, 70);
 	auto font_scale = 1.1;
 	cv::putText(image, str, point, cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(0, 0, 0), 6, cv::LINE_AA);
 	cv::putText(image, str, point, cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(255, 255, 255), 1, cv::LINE_AA );
 }
+
 
 std::string parse_cmd_args(const LPWSTR& lpCmdLine, int& next_frame_time)
 {
@@ -38,23 +39,35 @@ std::string parse_cmd_args(const LPWSTR& lpCmdLine, int& next_frame_time)
 	return conn_str.find("DelayChecker.exe") != std::string::npos ? "rtsp://localhost:5555/stream" : conn_str;
 }
 
+
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                       _In_opt_ HINSTANCE hPrevInstance,
                       _In_ LPWSTR lpCmdLine,
                       _In_ int nCmdShow)
 {
 	int next_frame_time = 32;
+	int skip_frames_num = 2;
 	auto conn_str = parse_cmd_args(lpCmdLine, next_frame_time);
 	cv::Mat image;
 	cv::VideoCapture reader(conn_str);
 	std::cout << reader.getBackendName() << std::endl;
 	std::cout << ( reader.getExceptionMode() ? "Exception mode is active" : "Exception mode is not active" ) << std::endl;
-	cv::namedWindow(conn_str, cv::WINDOW_AUTOSIZE);
+	cv::namedWindow(conn_str, cv::WINDOW_FREERATIO);
+	if (!reader.read(image))
+		cv::resizeWindow(conn_str, 600, 400);
+	else
+	{
+		auto width =  static_cast<int>(reader.get(cv::CAP_PROP_FRAME_WIDTH));
+		auto height = static_cast<int>(reader.get(cv::CAP_PROP_FRAME_HEIGHT));
+		std::cout << "Width: "<< width << " Height: " << height << std::endl;
+		cv::resizeWindow(conn_str, width, height);
+	}
 
 	while( cv::getWindowProperty(conn_str, cv::WindowPropertyFlags::WND_PROP_FULLSCREEN) != -1 )
 	{
 		if (!reader.read(image)){
-			reader.grab();
+			for (size_t i = 0; i < skip_frames_num; i++)
+				reader.grab();
 			continue;
 		}
 		
