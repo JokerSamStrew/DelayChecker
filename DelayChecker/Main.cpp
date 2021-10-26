@@ -63,6 +63,10 @@ void log_capture_props(const cv::VideoCapture& reader)
 	spdlog::info("{} {}", "CAP_PROP_WHITE_BALANCE_RED_V", reader.get(cv::VideoCaptureProperties::CAP_PROP_WHITE_BALANCE_RED_V));
 	spdlog::info("{} {}", "CAP_PROP_ZOOM", reader.get(cv::VideoCaptureProperties::CAP_PROP_ZOOM));
 	spdlog::info("{} {}", "CV__CAP_PROP_LATEST", reader.get(cv::VideoCaptureProperties::CV__CAP_PROP_LATEST));
+
+	auto sec = static_cast<int>(reader.get(cv::VideoCaptureProperties::CAP_PROP_POS_MSEC)) / 1000;
+	auto frames = static_cast<int>(reader.get(cv::VideoCaptureProperties::CAP_PROP_POS_FRAMES));
+	spdlog::info("{} {}", "Current FPS", sec / frames);
 }
 
 void draw_info(const cv::Mat& image, const cv::VideoCapture& reader)
@@ -81,13 +85,13 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                       _In_ LPWSTR lpCmdLine,
                       _In_ int nCmdShow)
 {
-
-	int next_frame_time = 32;
 	int skip_frames_num = 2;
-	auto conn_str = utility::parse_cmd_args(lpCmdLine, next_frame_time);
+	int next_frame_time_arg = 0;
+	auto conn_str = utility::parse_cmd_args(lpCmdLine, next_frame_time_arg);
 	cv::Mat image;
-	cv::VideoCapture reader(conn_str);
-
+	cv::VideoCapture reader;
+	reader.open(conn_str);
+	reader.set(cv::VideoCaptureProperties::CAP_PROP_POS_MSEC, 0);
 	cv::namedWindow(conn_str, cv::WINDOW_FREERATIO);
 	if (!reader.read(image))
 		cv::resizeWindow(conn_str, 600, 400);
@@ -98,9 +102,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		cv::resizeWindow(conn_str, width, height);
 	}
 
+	int next_frame_time = next_frame_time_arg == 0 ? 1000 / static_cast<int>(reader.get(cv::VideoCaptureProperties::CAP_PROP_FPS)) : next_frame_time_arg;
 	setup_logger();
 	spdlog::info("{} {}", "getBackendName", reader.getBackendName());
-	
 	spdlog::info(reader.getExceptionMode() ? "Exception mode is active" : "Exception mode is not active");
 	log_capture_props(reader);
 
@@ -113,7 +117,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		}
 
 		draw_info(image, reader);
-
 		cv::imshow(conn_str, image);
 		cv::waitKey(next_frame_time);
 		image.release();
