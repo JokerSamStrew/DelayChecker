@@ -9,8 +9,7 @@
 void setup_logger()
 {
 	const auto pid = std::to_string(GetCurrentProcessId());
-	const auto logger = spdlog::basic_logger_st("",
-	                                             ".\\DelayChecker_" + pid + ".log");
+	const auto logger = spdlog::basic_logger_st("DC", ".\\DelayChecker_" + pid + ".log");
 	spdlog::set_default_logger(logger);
 	spdlog::flush_on(spdlog::level::info);
 }
@@ -66,6 +65,17 @@ void log_capture_props(const cv::VideoCapture& reader)
 	spdlog::info("{} {}", "CV__CAP_PROP_LATEST", reader.get(cv::VideoCaptureProperties::CV__CAP_PROP_LATEST));
 }
 
+void draw_info(const cv::Mat& image, const cv::VideoCapture& reader)
+{
+	auto sec = static_cast<int>(reader.get(cv::VideoCaptureProperties::CAP_PROP_POS_MSEC)) / 1000;
+	auto frames = static_cast<int>(reader.get(cv::VideoCaptureProperties::CAP_PROP_POS_FRAMES));
+
+	utility::draw_time(image);
+	utility::draw_num(image, sec, 0);
+	utility::draw_num(image, frames, 1);
+	utility::draw_num(image, frames / sec, 2);
+}
+
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                       _In_opt_ HINSTANCE hPrevInstance,
                       _In_ LPWSTR lpCmdLine,
@@ -77,8 +87,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	auto conn_str = utility::parse_cmd_args(lpCmdLine, next_frame_time);
 	cv::Mat image;
 	cv::VideoCapture reader(conn_str);
-	spdlog::info("{} {}", "getBackendName", reader.getBackendName());
-	spdlog::info(reader.getExceptionMode() ? "Exception mode is active" : "Exception mode is not active");
+
 	cv::namedWindow(conn_str, cv::WINDOW_FREERATIO);
 	if (!reader.read(image))
 		cv::resizeWindow(conn_str, 600, 400);
@@ -90,6 +99,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	}
 
 	setup_logger();
+	spdlog::info("{} {}", "getBackendName", reader.getBackendName());
+	
+	spdlog::info(reader.getExceptionMode() ? "Exception mode is active" : "Exception mode is not active");
 	log_capture_props(reader);
 
 	while( cv::getWindowProperty(conn_str, cv::WindowPropertyFlags::WND_PROP_FULLSCREEN) != -1 )
@@ -99,13 +111,15 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 				reader.grab();
 			continue;
 		}
-		
-		utility::draw_time(image);
+
+		draw_info(image, reader);
+
 		cv::imshow(conn_str, image);
 		cv::waitKey(next_frame_time);
 		image.release();
 	}
 
+	log_capture_props(reader);
 	reader.release();
 	ExitProcess(0);
 }

@@ -10,7 +10,7 @@ class utility
 {
 public:
 	static void draw_time(const cv::Mat& image);
-	static void draw_num(const cv::Mat& image, int num);
+	static void draw_num(const cv::Mat& image, int num, int draw_step);
 	static std::string parse_cmd_args(const LPWSTR& lpCmdLine, int& next_frame_time);
 };
 

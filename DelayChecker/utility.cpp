@@ -22,23 +22,14 @@ void utility::draw_time(const cv::Mat& image)
 	cv::putText(image, str, point, cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(255, 255, 255), 1, cv::LINE_AA );
 }
 
-void utility::draw_num(const cv::Mat& image, int num)
+void utility::draw_num(const cv::Mat& image, int num, int draw_step)
 {
 	tm newtime;
 	const time_t now = time(NULL);
 	errno_t err = localtime_s(&newtime, &now);
-	std::string str;
-	if (err)
-		str = "locatime err";
-
-	auto hour = newtime.tm_hour < 10 ? " " + std::to_string(newtime.tm_hour) : std::to_string(newtime.tm_hour);
-	auto min = newtime.tm_min < 10 ? "0" + std::to_string(newtime.tm_min) : std::to_string(newtime.tm_min);
-	auto sec = newtime.tm_sec < 10 ? "0" + std::to_string(newtime.tm_sec) : std::to_string(newtime.tm_sec);
-
-	str = hour + ":" + min + ":" + sec;
-
-	auto point = cv::Point(20, 70);
-	auto font_scale = 1.1;
+	std::string str = std::to_string(num);
+	auto point = cv::Point(20, 110 + 25 * draw_step);
+	auto font_scale = 0.7;
 	cv::putText(image, str, point, cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(0, 0, 0), 6, cv::LINE_AA);
 	cv::putText(image, str, point, cv::FONT_HERSHEY_DUPLEX, font_scale, cv::Scalar(255, 255, 255), 1, cv::LINE_AA );
 }
