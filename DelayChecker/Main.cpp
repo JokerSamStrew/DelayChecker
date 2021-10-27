@@ -73,6 +73,7 @@ void draw_info(const cv::Mat& image, const cv::VideoCapture& reader)
 {
 	auto sec = static_cast<int>(reader.get(cv::VideoCaptureProperties::CAP_PROP_POS_MSEC)) / 1000;
 	auto frames = static_cast<int>(reader.get(cv::VideoCaptureProperties::CAP_PROP_POS_FRAMES));
+	sec = sec == 0 ? 1 : sec;
 
 	utility::draw_time(image);
 	utility::draw_num(image, sec, 0);
@@ -91,7 +92,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	cv::Mat image;
 	cv::VideoCapture reader;
 	reader.open(conn_str);
-	reader.set(cv::VideoCaptureProperties::CAP_PROP_POS_MSEC, 0);
 	cv::namedWindow(conn_str, cv::WINDOW_FREERATIO);
 	if (!reader.read(image))
 		cv::resizeWindow(conn_str, 600, 400);
@@ -100,6 +100,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		auto width =  static_cast<int>(reader.get(cv::CAP_PROP_FRAME_WIDTH));
 		auto height = static_cast<int>(reader.get(cv::CAP_PROP_FRAME_HEIGHT));
 		cv::resizeWindow(conn_str, width, height);
+		cv::imshow(conn_str, image);
 	}
 
 	int next_frame_time = next_frame_time_arg == 0 ? 1000 / static_cast<int>(reader.get(cv::VideoCaptureProperties::CAP_PROP_FPS)) : next_frame_time_arg;
@@ -108,6 +109,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	spdlog::info(reader.getExceptionMode() ? "Exception mode is active" : "Exception mode is not active");
 	log_capture_props(reader);
 
+	reader.set(cv::VideoCaptureProperties::CAP_PROP_POS_MSEC, 0);
 	while( cv::getWindowProperty(conn_str, cv::WindowPropertyFlags::WND_PROP_FULLSCREEN) != -1 )
 	{
 		if (!reader.read(image)){
