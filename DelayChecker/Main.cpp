@@ -15,8 +15,11 @@ void setup_logger()
 	spdlog::flush_on(spdlog::level::info);
 }
 
+
+
 void log_capture_props(const cv::VideoCapture& reader)
 {
+
     spdlog::info("{} {}", "CAP_PROP_AUTOFOCUS", reader.get(cv::VideoCaptureProperties::CAP_PROP_AUTOFOCUS));
 	spdlog::info("{} {}", "CAP_PROP_AUTO_EXPOSURE", reader.get(cv::VideoCaptureProperties::CAP_PROP_AUTO_EXPOSURE));
 	spdlog::info("{} {}", "CAP_PROP_AUTO_WB", reader.get(cv::VideoCaptureProperties::CAP_PROP_AUTO_WB));
@@ -32,7 +35,15 @@ void log_capture_props(const cv::VideoCapture& reader)
 	spdlog::info("{} {}", "CAP_PROP_EXPOSURE", reader.get(cv::VideoCaptureProperties::CAP_PROP_EXPOSURE));
 	spdlog::info("{} {}", "CAP_PROP_FOCUS", reader.get(cv::VideoCaptureProperties::CAP_PROP_FOCUS));
 	spdlog::info("{} {}", "CAP_PROP_FORMAT", reader.get(cv::VideoCaptureProperties::CAP_PROP_FORMAT));
-	spdlog::info("{} {}", "CAP_PROP_FOURCC", reader.get(cv::VideoCaptureProperties::CAP_PROP_FOURCC));
+
+	union {
+		char    c[5];
+		int     i;
+	} myfourcc;
+	myfourcc.i = static_cast<int>(reader.get(cv::VideoCaptureProperties::CAP_PROP_FOURCC));
+	myfourcc.c[4] = '\0';
+
+	spdlog::info("{} {}", "CAP_PROP_FOURCC", myfourcc.c);
 	spdlog::info("{} {}", "CAP_PROP_FPS", reader.get(cv::VideoCaptureProperties::CAP_PROP_FPS));
 	spdlog::info("{} {}", "CAP_PROP_FRAME_COUNT", reader.get(cv::VideoCaptureProperties::CAP_PROP_FRAME_COUNT));
 	spdlog::info("{} {}", "CAP_PROP_FRAME_HEIGHT", reader.get(cv::VideoCaptureProperties::CAP_PROP_FRAME_HEIGHT));
@@ -94,11 +105,15 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	_putenv_s("OPENCV_FFMPEG_CAPTURE_OPTIONS", "rtsp_transport;udp");
 	
 	int skip_frames_num = 2;
-	int next_frame_time_arg = 0;
+	int next_frame_time_arg = 34;
 	auto conn_str = utility::parse_cmd_args(lpCmdLine, next_frame_time_arg);
 	cv::Mat image;
-	cv::VideoCapture reader;
-	reader.open(conn_str);
+	cv::VideoCapture reader(conn_str, cv::CAP_FFMPEG);
+	if (!reader.isOpened()){
+		spdlog::error("Open failed");
+		ExitProcess(1);
+	}
+
 	cv::namedWindow(conn_str, cv::WINDOW_FREERATIO);
 	if (!reader.read(image))
 		cv::resizeWindow(conn_str, 600, 400);
@@ -119,18 +134,21 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	reader.set(cv::VideoCaptureProperties::CAP_PROP_POS_MSEC, 0);
 	while( cv::getWindowProperty(conn_str, cv::WindowPropertyFlags::WND_PROP_FULLSCREEN) != -1 )
 	{
-		if (!reader.read(image)){
-			for (size_t i = 0; i < skip_frames_num; i++)
-				reader.grab();
+		if (!reader.read(image) || image.empty()){
 			continue;
 		}
 
 		draw_info(image, reader);
 		cv::imshow(conn_str, image);
 		cv::waitKey(next_frame_time);
-		image.release();
+
+		for (size_t i = 0; i < skip_frames_num; i++)
+			if ( !reader.grab() )
+				break;
+
 	}
 
+	image.release();
 	log_capture_props(reader);
 	reader.release();
 	ExitProcess(0);

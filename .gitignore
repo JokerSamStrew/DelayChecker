@@ -47,3 +47,6 @@ RecognitionService.conf
 x64/
 *.zip
 *.pdb
+
+Release/
+Debug/
