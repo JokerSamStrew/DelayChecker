@@ -4,7 +4,8 @@
 #include <atlsafe.h>
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/basic_file_sink.h>
-
+#pragma comment(lib, "Ws2_32.lib")
+#pragma comment(lib,"Advapi32.lib")
 
 void setup_logger()
 {
@@ -66,7 +67,9 @@ void log_capture_props(const cv::VideoCapture& reader)
 
 	auto sec = static_cast<int>(reader.get(cv::VideoCaptureProperties::CAP_PROP_POS_MSEC)) / 1000;
 	auto frames = static_cast<int>(reader.get(cv::VideoCaptureProperties::CAP_PROP_POS_FRAMES));
-	spdlog::info("{} {}", "Current FPS", sec / frames);
+	sec = sec == 0 ? 1 : sec;
+	frames = frames == 0 ? 1 : frames;
+	spdlog::info("{} {}", "Current FPS", frames / sec);
 }
 
 void draw_info(const cv::Mat& image, const cv::VideoCapture& reader)
@@ -74,6 +77,7 @@ void draw_info(const cv::Mat& image, const cv::VideoCapture& reader)
 	auto sec = static_cast<int>(reader.get(cv::VideoCaptureProperties::CAP_PROP_POS_MSEC)) / 1000;
 	auto frames = static_cast<int>(reader.get(cv::VideoCaptureProperties::CAP_PROP_POS_FRAMES));
 	sec = sec == 0 ? 1 : sec;
+	frames = frames == 0 ? 1 : frames;
 
 	utility::draw_time(image);
 	utility::draw_num(image, sec, 0);
@@ -86,6 +90,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                       _In_ LPWSTR lpCmdLine,
                       _In_ int nCmdShow)
 {
+	
+	_putenv_s("OPENCV_FFMPEG_CAPTURE_OPTIONS", "rtsp_transport;udp");
+	
 	int skip_frames_num = 2;
 	int next_frame_time_arg = 0;
 	auto conn_str = utility::parse_cmd_args(lpCmdLine, next_frame_time_arg);
