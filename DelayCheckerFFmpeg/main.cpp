@@ -1,10 +1,23 @@
-#include <libavcodec/avcodec.h>
-#include <libavformat/avformat.h>
-#include <libswscale/swscale.h>
-#include <libavutil/imgutils.h>
+
+extern "C" {
+	#include <libavcodec/avcodec.h>
+	#include <libavformat/avformat.h>
+	#include <libswscale/swscale.h>
+	#include <libavutil/imgutils.h>
+
+	#pragma comment (lib,"D:\\Projects\\vcpkg\\installed\\x64-windows\\lib\\swscale.lib")
+	#pragma comment (lib,"D:\\Projects\\vcpkg\\installed\\x64-windows\\lib\\swresample.lib")
+	#pragma comment (lib,"D:\\Projects\\vcpkg\\installed\\x64-windows\\lib\\avutil.lib")
+	#pragma comment (lib,"D:\\Projects\\vcpkg\\installed\\x64-windows\\lib\\avformat.lib")
+	#pragma comment (lib,"D:\\Projects\\vcpkg\\installed\\x64-windows\\lib\\avfilter.lib")
+	#pragma comment (lib,"D:\\Projects\\vcpkg\\installed\\x64-windows\\lib\\avdevice.lib")
+	#pragma comment (lib,"D:\\Projects\\vcpkg\\installed\\x64-windows\\lib\\avcodec.lib")
+}
 
 #include <stdio.h>
 #include <string>
+
+
 
 // compatibility with newer API
 #if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(55,28,1)
@@ -29,9 +42,9 @@ void save_frame(AVFrame* pFrame, int width, int height) {
 	auto sec = newtime.tm_sec < 10 ? "0" + std::to_string(newtime.tm_sec) : std::to_string(newtime.tm_sec);
 
 	// Open file
-	sprintf_s(szFilename, "frame%s:%s:%s.ppm", hour.c_str(), min.c_str(), sec.c_str());
-	fopen_s(&pFile, szFilename, "wb");
-	if (pFile == NULL)
+	sprintf_s(szFilename, "frame%s.%s.%s.ppm", hour.c_str(), min.c_str(), sec.c_str());
+	err = fopen_s(&pFile, szFilename, "wb");
+	if (err && pFile == NULL)
 		return;
 
 	// Write header
@@ -63,16 +76,19 @@ int main(int argc, char* argv[]) {
 		return -1;
 	}
 
+	char* input = argv[1];
+	//const char* input = "C:\\Users\\Administrator\\Cormeum\\tools\\simple_rtsp_server\\RecAuto.mp4";
+
 	// Open video file
-	if (avformat_open_input(&pFormatCtx, argv[1], NULL, NULL) != 0)
+	if (avformat_open_input(&pFormatCtx, input, NULL, NULL) != 0)
 		return -1; // Couldn't open file
 
-	  // Retrieve stream information
+	// Retrieve stream information
 	if (avformat_find_stream_info(pFormatCtx, NULL) < 0)
 		return -1; // Couldn't find stream information
 
-	  // Dump information about file onto standard error
-	av_dump_format(pFormatCtx, 0, argv[1], 0);
+	// Dump information about file onto standard error
+	av_dump_format(pFormatCtx, 0, input, 0);
 
 	// Find the first video stream
 	videoStream = -1;
@@ -92,6 +108,10 @@ int main(int argc, char* argv[]) {
 	}
 	// Copy context
 	pCodecCtx = avcodec_alloc_context3(pCodec);
+	if (!pCodecCtx) {
+        fprintf(stderr, "Could not allocate video codec context\n");
+        exit(1);
+    }
 	if (avcodec_parameters_to_context(pCodecCtx, pFormatCtx->streams[videoStream]->codecpar) != 0) {
 		fprintf(stderr, "Couldn't copy codec context");
 		return -1; // Error copying codec context
@@ -109,7 +129,7 @@ int main(int argc, char* argv[]) {
 	if (pFrameRGB == NULL)
 		return -1;
 
-	// Determine required buffer size and allocate buffer
+	//// Determine required buffer size and allocate buffer
 	numBytes = av_image_get_buffer_size(AVPixelFormat::AV_PIX_FMT_RGB24, pCodecCtx->width,
 		pCodecCtx->height, 1);
 
@@ -135,18 +155,32 @@ int main(int argc, char* argv[]) {
 		NULL
 	);
 
+
 	// Read frames and save first five frames to disk
 	i = 0;
-	while (avcodec_receive_frame(pCodecCtx, pFrame) >= 0) {
+	while ( i <= 30 ) {
 		// Is this a packet from the video stream?
 		// Did we get a video frame?
 		// Convert the image from its native format to RGB
+		int ret = avcodec_receive_frame(pCodecCtx, pFrame);
+        if (ret == AVERROR(EAGAIN)) {
+			fprintf(stderr, "EAGAIN\n");
+			i++;
+			continue;
+		} else if (ret == AVERROR_EOF) {
+			fprintf(stderr, "AVERROR_EOF\n");
+			break;
+		} else if (ret < 0) {
+            fprintf(stderr, "Error during decoding\n");
+            exit(1);
+        }
+
 		sws_scale(sws_ctx, (uint8_t const* const*)pFrame->data,
 			pFrame->linesize, 0, pCodecCtx->height,
 			pFrameRGB->data, pFrameRGB->linesize);
 
 		// Save the frame to disk
-		if (++i <= 5)
+		if (++i <= 1)
 			save_frame(pFrameRGB, pCodecCtx->width, pCodecCtx->height);
 	}
 
