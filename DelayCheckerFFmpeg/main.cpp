@@ -5,13 +5,13 @@ extern "C" {
 	#include <libswscale/swscale.h>
 	#include <libavutil/imgutils.h>
 
-	#pragma comment (lib,"D:\\Projects\\vcpkg\\installed\\x64-windows\\lib\\swscale.lib")
-	#pragma comment (lib,"D:\\Projects\\vcpkg\\installed\\x64-windows\\lib\\swresample.lib")
-	#pragma comment (lib,"D:\\Projects\\vcpkg\\installed\\x64-windows\\lib\\avutil.lib")
-	#pragma comment (lib,"D:\\Projects\\vcpkg\\installed\\x64-windows\\lib\\avformat.lib")
-	#pragma comment (lib,"D:\\Projects\\vcpkg\\installed\\x64-windows\\lib\\avfilter.lib")
-	#pragma comment (lib,"D:\\Projects\\vcpkg\\installed\\x64-windows\\lib\\avdevice.lib")
-	#pragma comment (lib,"D:\\Projects\\vcpkg\\installed\\x64-windows\\lib\\avcodec.lib")
+	#pragma comment (lib,"swscale.lib")
+	#pragma comment (lib,"swresample.lib")
+	#pragma comment (lib,"avutil.lib")
+	#pragma comment (lib,"avformat.lib")
+	#pragma comment (lib,"avfilter.lib")
+	#pragma comment (lib,"avdevice.lib")
+	#pragma comment (lib,"avcodec.lib")
 }
 
 #include <chrono>
