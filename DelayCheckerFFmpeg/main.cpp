@@ -181,7 +181,7 @@ int main(int argc, char* argv[]) {
                     break;
                 }
                 std::cout << "frame: " << pCodecCtx->frame_number << std::endl;
-				if (pCodecCtx->frame_number == 1){
+				if (!(pCodecCtx->frame_number % 10)){
 					sws_scale(sws_ctx, (uint8_t const* const*)pFrame->data,
 							pFrame->linesize, 0, pCodecCtx->height,
 							pFrameRGB->data, pFrameRGB->linesize);
