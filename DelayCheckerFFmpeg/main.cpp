@@ -14,10 +14,11 @@ extern "C" {
 	#pragma comment (lib,"D:\\Projects\\vcpkg\\installed\\x64-windows\\lib\\avcodec.lib")
 }
 
+#include <chrono>
+#include <thread>
 #include <stdio.h>
 #include <string>
-
-
+#include<iostream>
 
 // compatibility with newer API
 #if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(55,28,1)
@@ -106,12 +107,14 @@ int main(int argc, char* argv[]) {
 		fprintf(stderr, "Unsupported codec!\n");
 		return -1; // Codec not found
 	}
-	// Copy context
+
 	pCodecCtx = avcodec_alloc_context3(pCodec);
 	if (!pCodecCtx) {
         fprintf(stderr, "Could not allocate video codec context\n");
         exit(1);
     }
+
+	// Copy context
 	if (avcodec_parameters_to_context(pCodecCtx, pFormatCtx->streams[videoStream]->codecpar) != 0) {
 		fprintf(stderr, "Couldn't copy codec context");
 		return -1; // Error copying codec context
@@ -123,6 +126,8 @@ int main(int argc, char* argv[]) {
 
 	  // Allocate video frame
 	pFrame = av_frame_alloc();
+	if (pFrame == NULL)
+		return -1;
 
 	// Allocate an AVFrame structure
 	pFrameRGB = av_frame_alloc();
@@ -155,38 +160,45 @@ int main(int argc, char* argv[]) {
 		NULL
 	);
 
+	auto packet = av_packet_alloc();
+	if (packet == NULL)
+		return -1;
 
-	// Read frames and save first five frames to disk
-	i = 0;
-	while ( i <= 30 ) {
-		// Is this a packet from the video stream?
-		// Did we get a video frame?
-		// Convert the image from its native format to RGB
-		int ret = avcodec_receive_frame(pCodecCtx, pFrame);
-        if (ret == AVERROR(EAGAIN)) {
-			fprintf(stderr, "EAGAIN\n");
-			i++;
-			continue;
-		} else if (ret == AVERROR_EOF) {
-			fprintf(stderr, "AVERROR_EOF\n");
-			break;
-		} else if (ret < 0) {
-            fprintf(stderr, "Error during decoding\n");
-            exit(1);
+	int rfret = 0;
+    while((rfret = av_read_frame(pFormatCtx, packet)) >= 0){
+        if (packet->stream_index == videoStream) {
+            //std::cout << "Sending Packet" << std::endl;
+            int ret = avcodec_send_packet(pCodecCtx, packet);
+            if (ret < 0 || ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
+                std::cout << "avcodec_send_packet: " << ret << std::endl;
+                break;
+            }
+            while (ret  >= 0) {
+                //std::cout << "Receiving Frame" << std::endl;
+                ret = avcodec_receive_frame(pCodecCtx, pFrame);
+                if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
+                    //std::cout << "avcodec_receive_frame: " << ret << std::endl;
+                    break;
+                }
+                std::cout << "frame: " << pCodecCtx->frame_number << std::endl;
+				if (pCodecCtx->frame_number == 1){
+					sws_scale(sws_ctx, (uint8_t const* const*)pFrame->data,
+							pFrame->linesize, 0, pCodecCtx->height,
+							pFrameRGB->data, pFrameRGB->linesize);
+					save_frame(pFrameRGB, pCodecCtx->width, pCodecCtx->height);
+				}
+            }
         }
-
-		sws_scale(sws_ctx, (uint8_t const* const*)pFrame->data,
-			pFrame->linesize, 0, pCodecCtx->height,
-			pFrameRGB->data, pFrameRGB->linesize);
-
-		// Save the frame to disk
-		if (++i <= 1)
-			save_frame(pFrameRGB, pCodecCtx->width, pCodecCtx->height);
-	}
+        else {
+            //std::cout << "Not Video" << std::endl;
+        }
+        av_packet_unref(packet);
+    }
 
 	// Free the RGB image
 	av_free(buffer);
 	av_frame_free(&pFrameRGB);
+	av_packet_free(&packet);
 
 	// Free the YUV frame
 	av_frame_free(&pFrame);
