@@ -29,7 +29,7 @@ void save_frame(AVFrame* pFrame, int width, int height) {
 	auto sec = newtime.tm_sec < 10 ? "0" + std::to_string(newtime.tm_sec) : std::to_string(newtime.tm_sec);
 
 	// Open file
-	sprintf_s(szFilename, "frame%d:%d:%d.ppm", hour, min, sec);
+	sprintf_s(szFilename, "frame%s:%s:%s.ppm", hour.c_str(), min.c_str(), sec.c_str());
 	fopen_s(&pFile, szFilename, "wb");
 	if (pFile == NULL)
 		return;
@@ -54,8 +54,6 @@ int main(int argc, char* argv[]) {
 	AVCodec* pCodec = NULL;
 	AVFrame* pFrame = NULL;
 	AVFrame* pFrameRGB = NULL;
-	AVPacket          packet;
-	int               frameFinished;
 	int               numBytes;
 	uint8_t* buffer = NULL;
 	struct SwsContext* sws_ctx = NULL;
@@ -141,22 +139,15 @@ int main(int argc, char* argv[]) {
 	i = 0;
 	while (avcodec_receive_frame(pCodecCtx, pFrame) >= 0) {
 		// Is this a packet from the video stream?
-		if (packet.stream_index == videoStream) {
-			// Did we get a video frame?
-			if (frameFinished) {
-				// Convert the image from its native format to RGB
-				sws_scale(sws_ctx, (uint8_t const* const*)pFrame->data,
-					pFrame->linesize, 0, pCodecCtx->height,
-					pFrameRGB->data, pFrameRGB->linesize);
+		// Did we get a video frame?
+		// Convert the image from its native format to RGB
+		sws_scale(sws_ctx, (uint8_t const* const*)pFrame->data,
+			pFrame->linesize, 0, pCodecCtx->height,
+			pFrameRGB->data, pFrameRGB->linesize);
 
-				// Save the frame to disk
-				if (++i <= 5)
-					save_frame(pFrameRGB, pCodecCtx->width, pCodecCtx->height);
-			}
-		}
-
-		// Free the packet that was allocated by av_read_frame
-		av_packet_unref(&packet);
+		// Save the frame to disk
+		if (++i <= 5)
+			save_frame(pFrameRGB, pCodecCtx->width, pCodecCtx->height);
 	}
 
 	// Free the RGB image
