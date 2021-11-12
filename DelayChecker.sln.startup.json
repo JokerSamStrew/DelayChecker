@@ -25,6 +25,22 @@
           "StartProject": true
         }
       }
+    },
+    "DelayCheckerFFmpegWithArgs": {
+      "Projects": {
+        "DelayCheckerFFmpeg": {
+          "CommandLineArguments": "rtsp://localhost:5555/stream",
+          "StartProject": true
+        }
+      }
+    },
+    "DelayCheckerFFmpegWithNoArgs": {
+      "Projects": {
+        "DelayCheckerFFmpeg": {
+          "CommandLineArguments": "",
+          "StartProject": true
+        }
+      }
     }
   }
 }

@@ -108,8 +108,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	int next_frame_time_arg = 34;
 	auto conn_str = utility::parse_cmd_args(lpCmdLine, next_frame_time_arg);
 	cv::Mat image;
-	cv::VideoCapture reader(conn_str, cv::CAP_FFMPEG);
-	if (!reader.isOpened()){
+	cv::VideoCapture reader;
+	if (!reader.open(conn_str))
+	{
 		spdlog::error("Open failed");
 		ExitProcess(1);
 	}
@@ -127,14 +128,13 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 	int next_frame_time = next_frame_time_arg == 0 ? 1000 / static_cast<int>(reader.get(cv::VideoCaptureProperties::CAP_PROP_FPS)) : next_frame_time_arg;
 	setup_logger();
-	spdlog::info("{} {}", "getBackendName", reader.getBackendName());
-	spdlog::info(reader.getExceptionMode() ? "Exception mode is active" : "Exception mode is not active");
 	log_capture_props(reader);
 
 	reader.set(cv::VideoCaptureProperties::CAP_PROP_POS_MSEC, 0);
 	while( cv::getWindowProperty(conn_str, cv::WindowPropertyFlags::WND_PROP_FULLSCREEN) != -1 )
 	{
 		if (!reader.read(image) || image.empty()){
+			reader.open(conn_str);
 			continue;
 		}
 
